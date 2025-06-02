@@ -3,82 +3,86 @@ require_once 'auth.php';
 require_once 'conexion.php';
 checkRole('cliente');
 
-// Cancelar cita
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'cancelar') {
-    $cita_id = $_POST['cita_id'];
-    $stmt = $pdo->prepare("UPDATE citas SET estado = 'cancelada', fecha_actualizacion = CURRENT_TIMESTAMP 
-                           WHERE id = ? AND cliente_id = ? AND estado IN ('pendiente', 'confirmada')");
-    $stmt->execute([$cita_id, $_SESSION['user_id']]);
-    $message = $stmt->rowCount() > 0 ? "Cita cancelada exitosamente." : "Error: No se pudo cancelar la cita.";
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// Obtener citas
-$stmt = $pdo->prepare("
-    SELECT c.*, s.nombre as servicio_nombre, u.nombre as barbero_nombre 
-    FROM citas c 
-    JOIN servicios s ON c.servicio_id = s.id 
-    JOIN usuarios u ON c.barbero_id = u.id 
-    WHERE c.cliente_id = ?
-    ORDER BY c.fecha DESC, c.hora DESC
-");
-$stmt->execute([$_SESSION['user_id']]);
-$citas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Check for feedback message in session
+$message = isset($_SESSION['message']) ? $_SESSION['message'] : '';
+unset($_SESSION['message']);
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Cliente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h2>Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?> (Cliente)</h2>
-    
-    <a href="logout.php" class="logout-btn">Cerrar Sesión</a>
-    <a href="agendar_cita.php">Agendar Cita</a>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Barbería</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="dashboard_cliente.php">Mis Citas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="agendar_cita.php">Agendar Cita</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="logout.php">Cerrar Sesión</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="disponibilidad_citas.php">Consultar Disponibilidad</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <?php if (isset($message)): ?>
-        <p style="color: <?php echo strpos($message, 'Error') === false ? 'green' : 'red'; ?>;"><?php echo htmlspecialchars($message); ?></p>
-    <?php endif; ?>
+    <!-- Main Content with Sidebar -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="dashboard_cliente.php">Mis Citas</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="agendar_cita.php">Agendar Cita</a>
+                        </li>
+                        <!-- In dashboard_cliente.php, inside the sidebar <ul> -->
+                        <li class="nav-item">
+                            <a class="nav-link" href="disponibilidad_citas.php">Consultar Disponibilidad</a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
 
-    <h3>Tus Citas</h3>
-    <table>
-        <tr>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Servicio</th>
-            <th>Barbero</th>
-            <th>Estado</th>
-            <th>Acción</th>
-        </tr>
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <h2 class="mt-4">Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?> (Cliente)</h2>
+                <?php if ($message): ?>
+                    <div class="alert alert-<?php echo strpos($message, 'Error') === false ? 'success' : 'danger'; ?>">
+                        <?php echo htmlspecialchars($message); ?>
+                    </div>
+                <?php endif; ?>
+                <?php include 'lista_citas_cliente.php'; ?>
+            </main>
+        </div>
+    </div>
 
-        <?php if (!empty($citas)): ?>
-            <?php foreach ($citas as $cita): ?>
-                <tr>
-                    <td><?php echo htmlspecialchars($cita['fecha']); ?></td>
-                    <td><?php echo htmlspecialchars($cita['hora']); ?></td>
-                    <td><?php echo htmlspecialchars($cita['servicio_nombre']); ?></td>
-                    <td><?php echo htmlspecialchars($cita['barbero_nombre']); ?></td>
-                    <td><?php echo htmlspecialchars($cita['estado']); ?></td>
-                    <td>
-                        <?php if (in_array($cita['estado'], ['pendiente', 'confirmada'])): ?>
-                            <form method="POST" style="display:inline;">
-                                <input type="hidden" name="action" value="cancelar">
-                                <input type="hidden" name="cita_id" value="<?php echo $cita['id']; ?>">
-                                <button type="submit" class="action-btn" style="background-color: #e74c3c;">Cancelar</button>
-                            </form>
-                        <?php else: ?>
-                            —
-                        <?php endif; ?>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        <?php else: ?>
-            <tr>
-                <td colspan="6" style="text-align:center;">No tienes citas registradas.</td>
-            </tr>
-        <?php endif; ?>
-    </table>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

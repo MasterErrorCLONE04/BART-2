@@ -3,122 +3,91 @@ require_once 'auth.php';
 require_once 'conexion.php';
 checkRole('barbero');
 
-// Confirmar cita
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'confirmar') {
-    $cita_id = $_POST['cita_id'];
-
-    try {
-        // Obtener el precio del servicio
-        $stmt = $pdo->prepare("
-            SELECT s.precio 
-            FROM citas c 
-            JOIN servicios s ON c.servicio_id = s.id 
-            WHERE c.id = ? AND c.barbero_id = ?
-        ");
-        $stmt->execute([$cita_id, $_SESSION['user_id']]);
-        $servicio = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($servicio) {
-            // Actualizar estado y precio_final
-            $stmt = $pdo->prepare("
-                UPDATE citas 
-                SET estado = 'completada', precio_final = ?, fecha_actualizacion = CURRENT_TIMESTAMP 
-                WHERE id = ? AND barbero_id = ?
-            ");
-            $stmt->execute([$servicio['precio'], $cita_id, $_SESSION['user_id']]);
-            $message = "Cita confirmada exitosamente.";
-        } else {
-            $message = "Error: Cita no encontrada o no autorizada.";
-        }
-    } catch (PDOException $e) {
-        $message = "Error al confirmar cita: " . $e->getMessage();
-    }
+// Determine which section to display
+$section = isset($_GET['section']) ? $_GET['section'] : 'citas';
+$valid_sections = ['citas', 'servicios', 'pagos'];
+if (!in_array($section, $valid_sections)) {
+    $section = 'citas';
 }
-
-// Servicios realizados por el barbero
-$stmt = $pdo->prepare("
-    SELECT c.*, s.nombre as servicio_nombre 
-    FROM citas c 
-    JOIN servicios s ON c.servicio_id = s.id 
-    WHERE c.barbero_id = ? AND c.estado = 'completada'
-");
-$stmt->execute([$_SESSION['user_id']]);
-$servicios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Citas pendientes y confirmadas del barbero
-$stmt = $pdo->prepare("
-    SELECT c.*, s.nombre as servicio_nombre, u.nombre as cliente_nombre 
-    FROM citas c 
-    JOIN servicios s ON c.servicio_id = s.id 
-    JOIN usuarios u ON c.cliente_id = u.id 
-    WHERE c.barbero_id = ? AND c.estado IN ('pendiente', 'confirmada') 
-    ORDER BY c.fecha, c.hora
-");
-$stmt->execute([$_SESSION['user_id']]);
-$citas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Barbero</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h2>Bienvenido, <?php echo $_SESSION['nombre']; ?> (Barbero)</h2>
-    <a href="logout.php">Cerrar Sesión</a>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Barbería</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $section === 'citas' ? 'active' : ''; ?>" href="?section=citas">Citas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $section === 'servicios' ? 'active' : ''; ?>" href="?section=servicios">Servicios Realizados</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $section === 'pagos' ? 'active' : ''; ?>" href="?section=pagos">Pagos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="logout.php">Cerrar Sesión</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <?php if (isset($message)) echo "<p style='color: " . (strpos($message, 'Error') === false ? 'green' : 'red') . ";'>$message</p>"; ?>
+    <!-- Main Content with Sidebar -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $section === 'citas' ? 'active' : ''; ?>" href="?section=citas">Citas Pendientes</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $section === 'servicios' ? 'active' : ''; ?>" href="?section=servicios">Servicios Realizados</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $section === 'pagos' ? 'active' : ''; ?>" href="?section=pagos">Pagos Realizados</a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
 
-    <h3>Citas Pendientes y Confirmadas</h3>
-    <table>
-        <tr>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Cliente</th>
-            <th>Servicio</th>
-            <th>Estado</th>
-            <th>Acción</th>
-        </tr>
-        <?php foreach ($citas as $cita): ?>
-            <tr>
-                <td><?php echo htmlspecialchars($cita['fecha']); ?></td>
-                <td><?php echo htmlspecialchars($cita['hora']); ?></td>
-                <td><?php echo htmlspecialchars($cita['cliente_nombre']); ?></td>
-                <td><?php echo htmlspecialchars($cita['servicio_nombre']); ?></td>
-                <td><?php echo htmlspecialchars($cita['estado']); ?></td>
-                <td>
-                    <form method="POST" style="display:inline;">
-                        <input type="hidden" name="action" value="confirmar">
-                        <input type="hidden" name="cita_id" value="<?php echo $cita['id']; ?>">
-                        <button type="submit">Confirmar</button>
-                    </form>
-                </td>
-            </tr>
-        <?php endforeach; ?>
-        <?php if (empty($citas)): ?>
-            <tr><td colspan="6">No hay citas pendientes o confirmadas.</td></tr>
-        <?php endif; ?>
-    </table>
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <h2 class="mt-4">Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?> (Barbero)</h2>
+                <?php
+                // Include the appropriate section
+                switch ($section) {
+                    case 'citas':
+                        include 'citas_barbero.php';
+                        break;
+                    case 'servicios':
+                        include 'servicios_barbero.php';
+                        break;
+                    case 'pagos':
+                        include 'pagos_barbero.php';
+                        break;
+                }
+                ?>
+            </main>
+        </div>
+    </div>
 
-    <h3>Servicios Realizados</h3>
-    <table>
-        <tr>
-            <th>Fecha</th>
-            <th>Servicio</th>
-            <th>Precio</th>
-        </tr>
-        <?php foreach ($servicios as $servicio): ?>
-            <tr>
-                <td><?php echo htmlspecialchars($servicio['fecha']); ?></td>
-                <td><?php echo htmlspecialchars($servicio['servicio_nombre']); ?></td>
-                <td>$<?php echo number_format($servicio['precio_final'], 2); ?></td>
-            </tr>
-        <?php endforeach; ?>
-        <?php if (empty($servicios)): ?>
-            <tr><td colspan="3">No hay servicios realizados.</td></tr>
-        <?php endif; ?>
-    </table>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

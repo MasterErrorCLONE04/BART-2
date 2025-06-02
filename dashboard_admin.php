@@ -3,79 +3,100 @@ require_once 'auth.php';
 require_once 'conexion.php';
 checkRole('administrador');
 
-// Ingresos por día
-$stmt = $pdo->query("SELECT DATE(fecha_creacion) as dia, SUM(precio_final) as total FROM citas WHERE estado = 'completada' GROUP BY dia");
-$ingresos = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-// Clientes atendidos
-$stmt = $pdo->query("SELECT COUNT(DISTINCT cliente_id) as total_clientes FROM citas WHERE estado = 'completada'");
-$total_clientes = $stmt->fetch(PDO::FETCH_ASSOC)['total_clientes'];
-
-// Citas pendientes y confirmadas
-$stmt = $pdo->query("
-    SELECT c.*, s.nombre as servicio_nombre, u.nombre as cliente_nombre, b.nombre as barbero_nombre 
-    FROM citas c 
-    JOIN servicios s ON c.servicio_id = s.id 
-    JOIN usuarios u ON c.cliente_id = u.id 
-    JOIN usuarios b ON c.barbero_id = b.id 
-    WHERE c.estado IN ('pendiente', 'confirmada') 
-    ORDER BY c.fecha, c.hora
-");
-$citas = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Determine which section to display
+$section = isset($_GET['section']) ? $_GET['section'] : 'citas';
+$valid_sections = ['citas', 'ingresos', 'clientes', 'acciones'];
+if (!in_array($section, $valid_sections)) {
+    $section = 'citas';
+}
 ?>
 
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Administrador</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h2>Bienvenido, <?php echo $_SESSION['nombre']; ?> (Administrador)</h2>
-    <a href="logout.php">Cerrar Sesión</a>
-    
-    <h3>Ingresos por Día</h3>
-    <table>
-        <tr><th>Día</th><th>Total</th></tr>
-        <?php foreach ($ingresos as $ingreso): ?>
-            <tr>
-                <td><?php echo $ingreso['dia']; ?></td>
-                <td>$<?php echo number_format($ingreso['total'], 2); ?></td>
-            </tr>
-        <?php endforeach; ?>
-    </table>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Barbería</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $section === 'citas' ? 'active' : ''; ?>" href="?section=citas">Citas</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $section === 'ingresos' ? 'active' : ''; ?>" href="?section=ingresos">Ingresos</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $section === 'clientes' ? 'active' : ''; ?>" href="?section=clientes">Clientes</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?php echo $section === 'acciones' ? 'active' : ''; ?>" href="?section=acciones">Acciones</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="logout.php">Cerrar Sesión</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
 
-    <h3>Clientes Atendidos</h3>
-    <p>Total: <?php echo $total_clientes; ?></p>
+    <!-- Main Content with Sidebar -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+                <div class="position-sticky pt-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $section === 'citas' ? 'active' : ''; ?>" href="?section=citas">Citas Pendientes</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $section === 'ingresos' ? 'active' : ''; ?>" href="?section=ingresos">Ingresos por Día</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $section === 'clientes' ? 'active' : ''; ?>" href="?section=clientes">Clientes Atendidos</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link <?php echo $section === 'acciones' ? 'active' : ''; ?>" href="?section=acciones">Acciones</a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
 
-    <h3>Citas Pendientes y Confirmadas</h3>
-    <table>
-        <tr>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Cliente</th>
-            <th>Barbero</th>
-            <th>Servicio</th>
-            <th>Estado</th>
-        </tr>
-        <?php foreach ($citas as $cita): ?>
-            <tr>
-                <td><?php echo htmlspecialchars($cita['fecha']); ?></td>
-                <td><?php echo htmlspecialchars($cita['hora']); ?></td>
-                <td><?php echo htmlspecialchars($cita['cliente_nombre']); ?></td>
-                <td><?php echo htmlspecialchars($cita['barbero_nombre']); ?></td>
-                <td><?php echo htmlspecialchars($cita['servicio_nombre']); ?></td>
-                <td><?php echo htmlspecialchars($cita['estado']); ?></td>
-            </tr>
-        <?php endforeach; ?>
-        <?php if (empty($citas)): ?>
-            <tr><td colspan="6">No hay citas pendientes o confirmadas.</td></tr>
-        <?php endif; ?>
-    </table>
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <h2 class="mt-4">Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?> (Administrador)</h2>
+                <?php
+                // Include the appropriate section
+                switch ($section) {
+                    case 'citas':
+                        include 'citas_admin.php';
+                        break;
+                    case 'ingresos':
+                        include 'ingresos_admin.php';
+                        break;
+                    case 'clientes':
+                        include 'clientes_admin.php';
+                        break;
+                    case 'acciones':
+                        include 'acciones_admin.php';
+                        break;
+                }
+                ?>
+            </main>
+        </div>
+    </div>
 
-    <h3>Acciones</h3>
-    <a href="gestion_barberos.php">Gestionar Barberos</a><br>
-    <a href="gestion_pagos.php">Gestionar Pagos y Comisiones</a>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
