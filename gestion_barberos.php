@@ -85,7 +85,6 @@ $barberos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <button type="submit">Crear Barbero</button>
     </form>
 
-    <!-- Lista de barberos -->
     <h3>Lista de Barberos</h3>
     <table>
         <tr>
@@ -122,5 +121,28 @@ $barberos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </tr>
         <?php endforeach; ?>
     </table>
+
+    <h3>Horarios de <?php echo htmlspecialchars($barbero['nombre']); ?></h3>
+            <table>
+                <tr><th>Día</th><th>Hora Inicio</th><th>Hora Fin</th><th>Acción</th></tr>
+                <?php
+                $stmt = $pdo->prepare("SELECT * FROM horarios_barberos WHERE barbero_id = ?");
+                $stmt->execute([$barbero['id']]);
+                $horarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($horarios as $horario): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($horario['dia_semana']); ?></td>
+                    <td><?php echo htmlspecialchars($horario['hora_inicio']); ?></td>
+                    <td><?php echo htmlspecialchars($horario['hora_fin']); ?></td>
+                    <td>
+                        <form method="POST" style="display:inline;">
+                            <input type="hidden" name="action" value="delete_horario">
+                            <input type="hidden" name="horario_id" value="<?php echo $horario['id']; ?>">
+                            <button type="submit">Eliminar</button>
+                        </form>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </table>
 </body>
 </html>

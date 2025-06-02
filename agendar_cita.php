@@ -9,12 +9,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fecha = $_POST['fecha'];
     $hora = $_POST['hora'];
 
-    // Validar disponibilidad (básica)
-    $stmt = $pdo->prepare("SELECT * FROM citas WHERE barbero_id = ? AND fecha = ? AND hora = ?");
-    $stmt->execute([$barbero_id, $fecha, $hora]);
-    if ($stmt->rowCount() > 0) {
-        $error = "El horario ya está ocupado.";
-    } else {
+    // Validar horario del barbero
+$stmt = $pdo->prepare("
+    SELECT * FROM horarios_barberos 
+    WHERE barbero_id = ? AND dia_semana = ? AND hora_inicio <= ? AND hora_fin >= ? AND activo = TRUE
+");
+$dia_semana = strtolower(date('l', strtotime($_POST['fecha'])));
+$stmt->execute([$barbero_id, $dia_semana, $_POST['hora'], $_POST['hora']]);
+if ($stmt->rowCount() == 0) {
+    $error = "El barbero no está disponible en ese horario.";
+} else {
         $stmt = $pdo->prepare("INSERT INTO citas (cliente_id, barbero_id, servicio_id, fecha, hora, estado) VALUES (?, ?, ?, ?, ?, 'pendiente')");
         $stmt->execute([$_SESSION['user_id'], $barbero_id, $servicio_id, $fecha, $hora]);
         header('Location: dashboard_cliente.php');
