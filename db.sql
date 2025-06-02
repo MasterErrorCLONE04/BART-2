@@ -54,6 +54,31 @@ CREATE TABLE horarios_barberos (
     FOREIGN KEY (barbero_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
 
+CREATE TABLE pagos_barberos (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    barbero_id INT NOT NULL,
+    monto DECIMAL(10,2) NOT NULL,
+    periodo_inicio DATE NOT NULL,
+    periodo_fin DATE NOT NULL,
+    fecha_pago TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    notas TEXT,
+    FOREIGN KEY (barbero_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+CREATE TABLE servicios_realizados (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    cliente_id INT NOT NULL,
+    barbero_id INT NOT NULL,
+    servicio_id INT NOT NULL,
+    fecha_servicio DATE NOT NULL,
+    precio_cobrado DECIMAL(10,2) NOT NULL,
+    comision_barbero DECIMAL(10,2) NOT NULL,
+    observaciones TEXT,
+    FOREIGN KEY (cliente_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (barbero_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (servicio_id) REFERENCES servicios(id) ON DELETE CASCADE
+);
+
 -- Insertar datos de ejemplo
 INSERT INTO usuarios (nombre, email, telefono, password, rol) VALUES
 ('Administrador', 'admin@barberia.com', '1234567890', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'administrador'),
@@ -84,21 +109,24 @@ JOIN servicios s ON sr.servicio_id = s.id
 ORDER BY sr.fecha_servicio DESC, sr.id DESC;
 
 -- Vista de comisiones pendientes por barbero
+DROP VIEW IF EXISTS vista_comisiones_pendientes;
+
 CREATE VIEW vista_comisiones_pendientes AS
 SELECT 
-    b.id as barbero_id,
-    b.nombre as barbero_nombre,
-    COUNT(sr.id) as servicios_realizados,
-    SUM(sr.comision_barbero) as total_comisiones,
-    MIN(sr.fecha_servicio) as fecha_inicio,
-    MAX(sr.fecha_servicio) as fecha_fin
+    b.id AS barbero_id,
+    b.nombre AS barbero_nombre,
+    COUNT(c.id) AS servicios_realizados,
+    SUM(c.precio_final * 0.5) AS total_comisiones,
+    MIN(c.fecha) AS fecha_inicio,
+    MAX(c.fecha) AS fecha_fin
 FROM usuarios b
-LEFT JOIN servicios_realizados sr ON b.id = sr.barbero_id
+LEFT JOIN citas c ON b.id = c.barbero_id 
+    AND c.estado = 'completada'
 LEFT JOIN pagos_barberos pb ON b.id = pb.barbero_id 
-    AND sr.fecha_servicio BETWEEN pb.periodo_inicio AND pb.periodo_fin
+    AND c.fecha BETWEEN pb.periodo_inicio AND pb.periodo_fin
 WHERE b.rol = 'barbero' 
     AND b.activo = TRUE
     AND pb.id IS NULL
-    AND sr.id IS NOT NULL
+    AND c.id IS NOT NULL
 GROUP BY b.id, b.nombre
 HAVING total_comisiones > 0;
