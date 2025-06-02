@@ -1,0 +1,200 @@
+/* ===================== */
+/* Estilo Global         */
+/* ===================== */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #f0f2f5, #dfe9f3);
+    color: #333;
+    margin: 0;
+    padding: 20px;
+}
+
+/* ===================== */
+/* Encabezados y textos  */
+/* ===================== */
+h2, h3 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+p {
+    padding: 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    margin-top: 15px;
+}
+
+p[style*="color: green"] {
+    background-color: #dff0d8;
+    color: #3c763d;
+}
+
+p[style*="color: red"] {
+    background-color: #f2dede;
+    color: #a94442;
+}
+
+.error {
+    background-color: #f2dede;
+    color: #a94442;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+/* ===================== */
+/* Tablas                */
+/* ===================== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 40px;
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+th, td {
+    padding: 14px 18px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+th {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    font-weight: bold;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* ===================== */
+/* Formularios           */
+/* ===================== */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select,
+textarea {
+    width: 40%;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border 0.3s, box-shadow 0.3s;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    outline: none;
+}
+
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #34495e;
+    text-align: left;
+}
+
+/* ===================== */
+/* Botones               */
+/* ===================== */
+button {
+    width: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    margin-top: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.action-btn {
+    width: auto;
+    padding: 8px 14px;
+    font-size: 14px;
+    border-radius: 6px;
+}
+
+/* ===================== */
+/* Enlaces               */
+/* ===================== */
+a {
+    color: #2980b9;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+a.logout-btn {
+    display: inline-block;
+    margin-bottom: 20px;
+    background-color: #e74c3c;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 6px;
+    transition: background-color 0.3s;
+}
+
+a.logout-btn:hover {
+    background-color: #c0392b;
+}
+
+/* ===================== */
+/* Formularios centrados */
+/* ===================== */
+.centered-form {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.form-container {
+    background-color: #ffffff;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+    animation: fadeIn 0.6s ease;
+}
+
+/* ===================== */
+/* Animación de entrada  */
+/* ===================== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
