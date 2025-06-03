@@ -47,16 +47,14 @@ function isBarberoAvailable($pdo, $barbero_id, $fecha, $hora, $duracion, $exclud
     }
 
     // Check for conflicting citas
-    $query = "
-        SELECT COUNT(*) 
+    $query = "SELECT COUNT(*) 
         FROM citas 
         WHERE barbero_id = ? 
         AND fecha = ? 
         AND estado IN ('pendiente', 'confirmada')
         AND (
             (hora <= ? AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion * 60 FROM servicios WHERE id = servicio_id)) > ?) 
-            OR (hora < ? AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion * 60 FROM servicios WHERE id = servicio_id)) >= ?)
-        )
+            OR (hora < ? AND ADDTIME(hora, SEC_TO_TIME((SELECT duracion * 60 FROM servicios WHERE id = servicio_id)) >= ?))
     ";
     $params = [$barbero_id, $fecha, $hora_inicio, $hora_inicio, $hora_fin, $hora_fin];
     

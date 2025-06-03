@@ -3,12 +3,14 @@ require_once 'auth.php';
 require_once 'conexion.php';
 checkRole('administrador');
 
-// Determine which section to display
-$section = isset($_GET['section']) ? $_GET['section'] : 'citas';
-$valid_sections = ['citas', 'ingresos', 'clientes', 'acciones'];
-if (!in_array($section, $valid_sections)) {
-    $section = 'citas';
+// Generate CSRF token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
+
+// Check for feedback message
+$message = isset($_SESSION['message']) ? $_SESSION['message'] : '';
+unset($_SESSION['message']);
 ?>
 
 <!DOCTYPE html>
@@ -31,16 +33,13 @@ if (!in_array($section, $valid_sections)) {
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link <?php echo $section === 'citas' ? 'active' : ''; ?>" href="?section=citas">Citas</a>
+                        <a class="nav-link active" href="dashboard_admin.php">Resumen</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?php echo $section === 'ingresos' ? 'active' : ''; ?>" href="?section=ingresos">Ingresos</a>
+                        <a class="nav-link" href="gestion_barberos.php">Gestión de Barberos</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?php echo $section === 'clientes' ? 'active' : ''; ?>" href="?section=clientes">Clientes</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?php echo $section === 'acciones' ? 'active' : ''; ?>" href="?section=acciones">Acciones</a>
+                        <a class="nav-link" href="gestion_horarios.php">Horarios de Barberos</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="logout.php">Cerrar Sesión</a>
@@ -58,16 +57,13 @@ if (!in_array($section, $valid_sections)) {
                 <div class="position-sticky pt-3">
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link <?php echo $section === 'citas' ? 'active' : ''; ?>" href="?section=citas">Citas Pendientes</a>
+                            <a class="nav-link active" href="dashboard_admin.php">Resumen</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link <?php echo $section === 'ingresos' ? 'active' : ''; ?>" href="?section=ingresos">Ingresos por Día</a>
+                            <a class="nav-link" href="gestion_barberos.php">Gestión de Barberos</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link <?php echo $section === 'clientes' ? 'active' : ''; ?>" href="?section=clientes">Clientes Atendidos</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $section === 'acciones' ? 'active' : ''; ?>" href="?section=acciones">Acciones</a>
+                            <a class="nav-link" href="gestion_horarios.php">Horarios de Barberos</a>
                         </li>
                     </ul>
                 </div>
@@ -76,23 +72,16 @@ if (!in_array($section, $valid_sections)) {
             <!-- Main Content -->
             <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
                 <h2 class="mt-4">Bienvenido, <?php echo htmlspecialchars($_SESSION['nombre']); ?> (Administrador)</h2>
-                <?php
-                // Include the appropriate section
-                switch ($section) {
-                    case 'citas':
-                        include 'citas_admin.php';
-                        break;
-                    case 'ingresos':
-                        include 'ingresos_admin.php';
-                        break;
-                    case 'clientes':
-                        include 'clientes_admin.php';
-                        break;
-                    case 'acciones':
-                        include 'acciones_admin.php';
-                        break;
-                }
-                ?>
+                <?php if ($message): ?>
+                    <div class="alert alert-<?php echo strpos($message, 'Error') === false ? 'success' : 'danger'; ?>">
+                        <?php echo htmlspecialchars($message); ?>
+                    </div>
+                <?php endif; ?>
+                <div class="mt-4">
+                    <h3>Resumen</h3>
+                    <!-- Existing summary content (e.g., stats, charts) -->
+                    <p>Gestione los horarios de los barberos desde <a href="gestion_horarios.php">Horarios de Barberos</a>.</p>
+                </div>
             </main>
         </div>
     </div>
